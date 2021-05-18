@@ -30,3 +30,8 @@ This problem overcomes the drawbacks of previous two problems of starvation and 
 Third Readers-Writers Problem make use of **FIFS(First Come First Serve)** strategy to overcome the problem of starvation. Suppose processes come as RRRWRWRRR. Now, in third readers-writers problem, the first three readers will first read. Then, when the next process which is a writer starts to execute, it won't leave the resource until it's done. Now, suppose by the time this writer is done writing, the next writer has already arrived then it will be queued up with other processes. Thus, it won't get to start writing before the process before it completed i.e. the reader processes are completed. Thus, when the first writer completes its process then the reader process will start as they are ahead of the second writer in the queue. And when the queued readers complete their task then only the second writer process will begin which will block any more processes from starting and so on.
 
 In this way, it saves both the readers and writers from starvation by its fairness of not giving them priority on the basis of reader/writer, but giving priority the process which reaches first to it.
+
+## References
+
+* <https://tutorialspoint.dev/computer-science/operating-systems/readers-writers-problem-set-1-introduction-and-readers-preference-solution>
+* https://en.wikipedia.org/wiki/Readers-writers_problem

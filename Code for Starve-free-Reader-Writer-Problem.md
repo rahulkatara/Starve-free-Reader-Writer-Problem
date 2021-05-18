@@ -38,7 +38,7 @@ struct Queue{
       Rear = NULL;
     }
   
-   	void push(int process_id){        //Function to push new process in the queue.
+    void push(int process_id){        //Function to push new process in the queue.
         Node* new_node = new Node();
         new_node->data = process_id;
         if(Rear != NULL){             //If queue is not empty then change the rear node.
@@ -111,7 +111,7 @@ Reader Process Implementation:
            
   rmutex->wait(process_id);                 // request exclusive access to readcount
   read_completed_count++;                // update count of active readers
-  if (read_start_count == read_completed_count)         // if there are no readers left
+  if (writer_waiting && read_start_count == read_completed_count)         // if there are no readers left
     resource->signal();             // release resource access for all
   rmutex->signal();                 // release access to readcount
 ```

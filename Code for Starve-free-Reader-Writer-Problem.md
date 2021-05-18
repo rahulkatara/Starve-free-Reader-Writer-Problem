@@ -3,7 +3,7 @@
 ## Semaphore Implementation
 
 ```cpp
-// The code for a FIFO semaphore.
+// Code for a FIFO semaphore.
 struct Semaphore{
     int value;
     Queue* Q = new Queue();
@@ -23,13 +23,13 @@ struct Semaphore{
     void signal(){
         value++;
         if(value <= 0){
-            int pid = Q->pop();
-            wakeup(pid); //this function will wakeup the process with the given pid.
+            int process_id = Q->pop();
+            wakeup(process_id); //wakeup is a system call which will resume the blocked process with a given process_id.
         }
     }
 };
 
-//The code for the queue which will allow us to make a FIFO semaphore.
+//Queue implementation for FIFO semaphore.
 struct Queue{
     Node* Front, Rear;
     
@@ -63,7 +63,7 @@ struct Queue{
     }
 }
 
-// A queue node: Each node is a reader/writer process to be processed in future.
+// Each node is a reader/writer process to be processed in future.
 Struct Node{
     Node* next;       //Pointer to next process in t
     int data;         //Store the process_id of the process.
@@ -81,11 +81,63 @@ Following are the global variables and their initialization.
 
 ```cpp
 //Shared data members
-Semaphore* in_sem = new Semaphore(1);
-Semaphore* out_sem = new Semaphore(1);
-Semaphore* writer_sem = new Semaphore(0);
-int num_started = 0; // a count of how many readers have started reading.
-int num_completed = 0;// a count of how many readers have completed reading.
+Semaphore* serviceQueue = new Semaphore(1);     // FAIRNESS: preserves ordering of requests (signaling must be FIFO)
+Semaphore* rmutex = new Semaphore(1);           // for syncing changes to shared variable readcount
+Semaphore* resource = new Semaphore(1);         // controls access (read/write) to the resource
+int read_started_count = 0; // a count of how many readers have started reading.
+int read_completed_count = 0;// a count of how many readers have completed reading.
 bool writer_waiting = false; // this indicated whether a writing is waiting.
 ```
 
+## Reader Process Code
+
+Reader Process Implementation:
+
+```cpp
+            /*-------------- ENTRY Section ------------------*/
+
+  serviceQueue->wait(process_id);           // wait in line to be serviced
+  rmutex->wait(process_id);                 // request exclusive access to readcount
+  read_start_count++;                // update count of active readers
+  if (read_start_count - read_completed_count == 1)         // if I am the first reader
+    resource->wait(process_id);             // request resource access for readers (writers blocked)
+  serviceQueue->signal();           // let next in line be serviced
+  rmutex->signal();                 // release access to readcount
+    
+           /*-------------- CRITICAL Section ------------------*/
+           //reading is performed
+    
+           /*-------------- EXIT Section ------------------*/
+           
+  rmutex->wait(process_id);                 // request exclusive access to readcount
+  read_completed_count++;                // update count of active readers
+  if (read_start_count == read_completed_count)         // if there are no readers left
+    resource->signal();             // release resource access for all
+  rmutex->signal();                 // release access to readcount
+```
+
+## Writer Process Code
+
+Writer Process Implementation:
+
+```cpp
+            /*-------------- ENTRY Section ------------------*/
+            
+  serviceQueue->wait(process_id);           // wait in line to be serviced
+  rmutex->wait(process_id);                 //// Secure out semaphore to ensure no read process modifies readcount variables to prevent any deadlocks;
+  if(read_start_count==read_completed_count){
+    rmutex->signal();
+  }else{
+    writer_waiting = true;
+    rmutex->signal();
+    resource->wait(process_id);
+    writer_waiting = false;
+  }
+        
+           /*-------------- CRITICAL Section ------------------*/
+           //writting is performed
+    
+           /*-------------- EXIT Section ------------------*/
+  
+  serviceQueue->signal();
+```
